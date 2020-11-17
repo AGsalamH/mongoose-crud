@@ -11,7 +11,7 @@ const dbConfig = {
     }
 };
 
-const Product = require('./models/product');
+const Product = require('./product');
 
 
 const app = express();
