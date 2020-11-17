@@ -1,5 +1,6 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const ObjectId = require('mongoose').Types.ObjectId;
 const morgan = require('morgan');
 
 const {validate, productValidationRules} = require('./validation');
@@ -51,6 +52,11 @@ app.post('/', productValidationRules(), validate, async (req, res, next) => {
 app.put('/:id', productValidationRules(), validate, async (req, res, next) => {
     try {
         const prodId = req.params.id;
+        if(!ObjectId.isValid(prodId)){
+            const error = new Error(`Cast to ObjectId failed for value ${prodId}`);
+            error.statusCode = 400;
+            return next(error);
+        }
         // this way
         // await Product.updateOne({_id: prodId}, {$set: {
         //     name: req.body.name,
@@ -66,7 +72,9 @@ app.put('/:id', productValidationRules(), validate, async (req, res, next) => {
         }
         product.name = req.body.name;
         product.price= req.body.price;
-        product.description= req.body.description;
+        if(req.body.description){
+            product.description= req.body.description;
+        }
         await product.save();
 
         res.status(201).json({
@@ -101,6 +109,14 @@ app.use((error, req, res, next)=>{
         error: message
     });
 });
+// 404
+app.use((req, res, next)=>{
+    res.status(404).json({
+        error: 'Page not found' 
+    });
+});
+
+
 
 
 (async ()=>{
