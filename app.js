@@ -81,7 +81,7 @@ app.delete('/:id', async (req, res, next) => {
     const prodId = req.params.id;
     try{
         const deleteCursor = await Product.deleteOne({_id: prodId});
-        res.status(200).json({
+        res.status(202).json({
             msg: `Deleted Count ${deleteCursor.deletedCount}`
         });
     }
