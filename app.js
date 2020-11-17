@@ -2,6 +2,8 @@ const express = require('express');
 const mongoose = require('mongoose');
 const morgan = require('morgan');
 
+const {validate, productValidationRules} = require('./validation');
+
 const dbname = 'recap-mongoose-crud';
 const dbConfig = {
     uri: `mongodb://localhost:27017/${dbname}`,
@@ -11,8 +13,8 @@ const dbConfig = {
     }
 };
 
+// Product Model
 const Product = require('./product');
-
 
 const app = express();
 app.use(morgan('dev'));
@@ -32,7 +34,7 @@ app.get('/', async (req, res, next) => {
 });
 
 // Add one
-app.post('/', async (req, res, next) => {
+app.post('/', productValidationRules(), validate, async (req, res, next) => {
     try {
         const product = new Product({...req.body});
         await product.save();
@@ -46,7 +48,7 @@ app.post('/', async (req, res, next) => {
 });
 
 // Edit one
-app.put('/:id', async (req, res, next) => {
+app.put('/:id', productValidationRules(), validate, async (req, res, next) => {
     try {
         const prodId = req.params.id;
         // this way
@@ -99,7 +101,6 @@ app.use((error, req, res, next)=>{
         error: message
     });
 });
-
 
 
 (async ()=>{
