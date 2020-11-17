@@ -2,8 +2,9 @@ const {check, validationResult} = require('express-validator');
 
 const productValidationRules = ()=>{
     return [
-        check('name').trim().isLength({min: 2}),
-        check('price').isNumeric({min:0}),
+        check('name', 'Should be at least 2 Characters').trim().isLength({min: 2}),
+        check('price', 'Should be a number >= 0').isNumeric({min:0}),
+        check('description').optional()
     ]
 };
 
