@@ -84,7 +84,7 @@ app.put('/:id', editProductRules(), validate, async (req, res, next) => {
 
         const savedProduct = await product.save();
 
-        res.status(201).json({
+        res.json({
             msg: `Product updated :)`,
             product: savedProduct
         });
