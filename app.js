@@ -1,107 +1,135 @@
+// Dependencies
 const express = require('express');
 const mongoose = require('mongoose');
 const ObjectId = require('mongoose').Types.ObjectId;
 const morgan = require('morgan');
 
-const {validate, productValidationRules} = require('./validation');
-
-const dbname = 'recap-mongoose-crud';
-const dbConfig = {
-    uri: `mongodb://localhost:27017/${dbname}`,
-    options:{
-        useNewUrlParser: true,
-        useUnifiedTopology: true
-    }
-};
+// Validation
+const {validate, productValidationRules, editProductRules} = require('./validation');
 
 // Product Model
 const Product = require('./product');
 
+// Instantiate express app
 const app = express();
+
+
+// Middlewares
 app.use(morgan('dev'));
 app.use(express.urlencoded({extended:true}));
 app.use(express.json());
 
-// GET All
+
+// helper method
+const _throw = err =>{
+    throw err;
+}
+
+/*
+    Endpoints:
+        - GET /
+        - POST /
+        - PUT /:id
+        - DELETE /:id    
+*/
+
+// GET /
+// Return all products
 app.get('/', async (req, res, next) => {
     try {
         const products = await Product.find({})
-        res.status(200).json({
-            products: products
-        });
+        res.json({products});
     } catch (err) {
-        next(err);
+        err instanceof mongoose.Error ? next(err) : _throw(err)
     }
 });
 
-// Add one
+// POST /
+// Create Product
 app.post('/', productValidationRules(), validate, async (req, res, next) => {
     try {
         const product = new Product({...req.body});
-        await product.save();
+        const savedProduct = await product.save();
         res.status(201).json({
-            msg: '1 Product added successfully.'
+            msg: '1 Product created :)',
+            product: savedProduct
         });
     } catch (err) {
-        next(err);
+        err instanceof mongoose.Error ? next(err) : _throw(err);
     }
 
 });
 
-// Edit one
-app.put('/:id', productValidationRules(), validate, async (req, res, next) => {
+// PUT /:id
+// Update product
+app.put('/:id', editProductRules(), validate, async (req, res, next) => {
     try {
         const prodId = req.params.id;
         if(!ObjectId.isValid(prodId)){
-            const error = new Error(`Cast to ObjectId failed for value ${prodId}`);
-            error.statusCode = 400;
-            return next(error);
+            const error = new mongoose.Error(`No product found!`);
+            error.statusCode = 404;
+            throw error;
         }
-        // this way
-        // await Product.updateOne({_id: prodId}, {$set: {
-        //     name: req.body.name,
-        //     price: req.body.price,
-        //     description: req.body.description,
-        // }});
-        // or this way
+
         const product = await Product.findById(prodId);
         if(!product){
-            const error = new Error('No product matches this ID');
+            const error = new mongoose.Error('No product found!');
             error.statusCode = 404;
-            return next(error);
+            throw error;
         }
-        product.name = req.body.name;
-        product.price= req.body.price;
-        if(req.body.description){
-            product.description= req.body.description;
-        }
-        await product.save();
+
+        product.name = req.body.name || product.name;
+        product.price= req.body.price || product.price;
+        product.description = req.body.description || product.description;
+
+        const savedProduct = await product.save();
 
         res.status(201).json({
-            msg: `Product ${product._id} Updated successfully.`
+            msg: `Product updated :)`,
+            product: savedProduct
         });
+
     } catch (err) {
-        next(err);
+        err instanceof mongoose.Error ? next(err) : _throw(err);
     }
 
 });
 
+// DELETE /:id
 // Delete One
 app.delete('/:id', async (req, res, next) => {
     const prodId = req.params.id;
     try{
-        const deleteCursor = await Product.deleteOne({_id: prodId});
-        res.status(202).json({
-            msg: `Deleted Count ${deleteCursor.deletedCount}`
+        if(! ObjectId.isValid(prodId)){
+            const error = new mongoose.Error('No product found!');
+            error.statusCode = 404;
+            throw error;
+        }
+        const product = await Product.findById(prodId);
+        if(!product){
+            const error = new mongoose.Error('No product found!');
+            error.statusCode = 404;
+            throw error;
+        }
+        const deletedProduct = await product.deleteOne();
+        res.json({
+            msg: `Product deleted`,
+            product: deletedProduct
         });
     }
     catch(err){
-        next(err);
+        err instanceof mongoose.Error ? next(err) : _throw(err);
     }
 });
 
+// 404
+app.use((req, res, next)=>{
+    error = new Error(`The URL you requested: ${req.url} is NOT found on Server!`);
+    error.statusCode = 404;
+    throw error; 
+});
 
-// Error Handling
+// General Error Handling middleware
 app.use((error, req, res, next)=>{
     const message = error.message;
     const statusCode = error.statusCode || 500;
@@ -109,22 +137,25 @@ app.use((error, req, res, next)=>{
         error: message
     });
 });
-// 404
-app.use((req, res, next)=>{
-    res.status(404).json({
-        error: 'Page not found' 
-    });
-});
 
 
+const PORT = 5000;
+const dbConfig = {
+    name: 'mongoose-crud',
+    uri: `mongodb://localhost:27017/mongoose-crud`,
+    options:{
+        useNewUrlParser: true,
+        useUnifiedTopology: true
+    }
+};
 
 
 (async ()=>{
     try{
         await mongoose.connect(dbConfig.uri, dbConfig.options);
         console.log('Connected to DB ... ');
-        app.listen(3000, ()=>{
-            console.log('Server is running ...');
+        app.listen(PORT, ()=>{
+            console.log(`Server is running on PORT: ${PORT} ...`);
         });
     }catch(err){
         console.log(err.message);
