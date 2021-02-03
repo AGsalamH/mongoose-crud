@@ -20,22 +20,28 @@ app.use(express.urlencoded({extended:true}));
 app.use(express.json());
 
 
-// helper method
+// helper methods
 const _throw = err =>{
     throw err;
 }
 
+const throwProductNotFound = () =>{
+    const error = new mongoose.Error('Product Not Found!');
+    error.statusCode = 404;
+    throw error;
+}
+
 /*
     Endpoints:
-        - GET /
-        - POST /
-        - PUT /:id
-        - DELETE /:id    
+        - GET /products
+        - POST /products
+        - PUT /products/:id
+        - DELETE /products/:id    
 */
 
-// GET /
+// GET /products
 // Return all products
-app.get('/', async (req, res, next) => {
+app.get('/products', async (req, res, next) => {
     try {
         const products = await Product.find({})
         res.json({products});
@@ -44,9 +50,28 @@ app.get('/', async (req, res, next) => {
     }
 });
 
-// POST /
+// GET /products/:id
+// Return single product
+app.get('/products/:id', async (req, res, next)=>{
+    try {
+        const id = req.params.id;
+        if(! ObjectId.isValid(id)){
+            throwProductNotFound();
+        }
+        const product = await Product.findById(id);
+        if(!product){
+            throwProductNotFound();
+        }
+        res.json({product});
+
+    } catch (err) {
+        err instanceof mongoose.Error ? next(err) : _throw(err)
+    }
+});
+
+// POST /products
 // Create Product
-app.post('/', productValidationRules(), validate, async (req, res, next) => {
+app.post('/products', productValidationRules(), validate, async (req, res, next) => {
     try {
         const product = new Product({...req.body});
         const savedProduct = await product.save();
@@ -60,22 +85,18 @@ app.post('/', productValidationRules(), validate, async (req, res, next) => {
 
 });
 
-// PUT /:id
+// PUT /products/:id
 // Update product
-app.put('/:id', editProductRules(), validate, async (req, res, next) => {
+app.put('/products/:id', editProductRules(), validate, async (req, res, next) => {
     try {
         const prodId = req.params.id;
         if(!ObjectId.isValid(prodId)){
-            const error = new mongoose.Error(`No product found!`);
-            error.statusCode = 404;
-            throw error;
+            throwProductNotFound();
         }
 
         const product = await Product.findById(prodId);
         if(!product){
-            const error = new mongoose.Error('No product found!');
-            error.statusCode = 404;
-            throw error;
+            throwProductNotFound();
         }
 
         product.name = req.body.name || product.name;
@@ -95,21 +116,17 @@ app.put('/:id', editProductRules(), validate, async (req, res, next) => {
 
 });
 
-// DELETE /:id
+// DELETE /products/:id
 // Delete One
-app.delete('/:id', async (req, res, next) => {
+app.delete('/products/:id', async (req, res, next) => {
     const prodId = req.params.id;
     try{
         if(! ObjectId.isValid(prodId)){
-            const error = new mongoose.Error('No product found!');
-            error.statusCode = 404;
-            throw error;
+            throwProductNotFound();
         }
         const product = await Product.findById(prodId);
         if(!product){
-            const error = new mongoose.Error('No product found!');
-            error.statusCode = 404;
-            throw error;
+            throwProductNotFound();
         }
         const deletedProduct = await product.deleteOne();
         res.json({
@@ -126,7 +143,7 @@ app.delete('/:id', async (req, res, next) => {
 app.use((req, res, next)=>{
     error = new Error(`The URL you requested: ${req.url} is NOT found on Server!`);
     error.statusCode = 404;
-    throw error; 
+    throw error;
 });
 
 // General Error Handling middleware
