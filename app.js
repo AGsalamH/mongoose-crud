@@ -56,11 +56,11 @@ app.get('/products/:id', async (req, res, next)=>{
     try {
         const id = req.params.id;
         if(! ObjectId.isValid(id)){
-            throwProductNotFound();
+            return throwProductNotFound();
         }
         const product = await Product.findById(id);
         if(!product){
-            throwProductNotFound();
+            return throwProductNotFound();
         }
         res.json({product});
 
@@ -91,12 +91,12 @@ app.put('/products/:id', editProductRules(), validate, async (req, res, next) =>
     try {
         const prodId = req.params.id;
         if(!ObjectId.isValid(prodId)){
-            throwProductNotFound();
+            return throwProductNotFound();
         }
 
         const product = await Product.findById(prodId);
         if(!product){
-            throwProductNotFound();
+            return throwProductNotFound();
         }
 
         product.name = req.body.name || product.name;
@@ -122,11 +122,11 @@ app.delete('/products/:id', async (req, res, next) => {
     const prodId = req.params.id;
     try{
         if(! ObjectId.isValid(prodId)){
-            throwProductNotFound();
+            return throwProductNotFound();
         }
         const product = await Product.findById(prodId);
         if(!product){
-            throwProductNotFound();
+            return throwProductNotFound();
         }
         const deletedProduct = await product.deleteOne();
         res.json({
