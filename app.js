@@ -15,7 +15,7 @@ const app = express();
 
 
 // Middlewares
-app.use(morgan('dev'));
+app.use(morgan('common'));
 app.use(express.urlencoded({extended:true}));
 app.use(express.json());
 
